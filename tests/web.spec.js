@@ -10,6 +10,27 @@ const { test, expect } = require('@playwright/test');
 // @abaplint/transpiler issue makes check_on_init() always false in the
 // transpiled backend, so it may not return view XML even though the
 // roundtrip itself succeeds.
+
+// The frontend state of the page's component. Read through UI5's component
+// registry, because there is no page-wide handle any more: abap2UI5 dropped
+// the window.z2ui5 global on 2026-09-22 and moved the state onto a context
+// per z2ui5.Component (core/Context.js), which Component.init also hangs on
+// the component as `ctx`. Probing the old global timed out on a page that
+// had booted fine - the smoke went red for its own probe, not for the page.
+// "container-z2ui5" is the id ComponentSupport gives the component of the
+// backend GET page: its settings id "z2ui5", prefixed with the container's
+// data-id "container" (z2ui5_cl_ui5_http_handler=>_http_get) - the same id
+// upstream's own e2e specs read. getComponentById exists since UI5 1.120,
+// the deprecated get( ) before it.
+function frontendState() {
+  const Component = window["sap"]?.ui?.require?.("sap/ui/core/Component");
+  if (!Component) return undefined;
+  const component = Component.getComponentById
+    ? Component.getComponentById("container-z2ui5")
+    : Component.get("container-z2ui5");
+  return component?.ctx?.state;
+}
+
 test('webpack build boots the backend-served frontend', async ({ page }) => {
   test.setTimeout(240000);
   await page.goto('/');
@@ -19,13 +40,13 @@ test('webpack build boots the backend-served frontend', async ({ page }) => {
   // (works without the UI5 CDN - pure in-browser backend + document.write).
   await page.waitForFunction(() => !!document.getElementById('sap-ui-bootstrap'), null, { timeout: 90000 });
 
-  // UI5 loaded from the CDN and onInitComponent ran
-  // (it sets window.z2ui5 = { checkLocal: true }).
-  await page.waitForFunction(() => window["z2ui5"]?.checkLocal === true, null, { timeout: 90000 });
+  // UI5 loaded from the CDN and the component initialized with the backend
+  // page's component data (Component.init sets checkLocal from it).
+  await page.waitForFunction(`(${frontendState})()?.checkLocal === true`, null, { timeout: 90000 });
 
   // The first POST roundtrip through the in-browser backend completed
-  // (Server.responseSuccess stores the parsed response on the z2ui5 global).
-  await page.waitForFunction(() => !!window["z2ui5"]?.oResponse, null, { timeout: 90000 });
+  // (Server.responseSuccess stores the parsed response on the context state).
+  await page.waitForFunction(`!!(${frontendState})()?.oResponse`, null, { timeout: 90000 });
 });
 
 // Regression test for the draft save/load cycle: the first roundtrip
