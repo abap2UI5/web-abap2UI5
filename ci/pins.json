@@ -1,0 +1,26 @@
+{
+  "_comment": "The frozen inputs of the demo. Every source the build reads from another repository is fetched at exactly this commit (ci/clone.mjs), and the page boots exactly this UI5 release (app/web.mjs). Nothing here moves on its own: there is no scheduled rebuild and no Dependabot. To refresh the demo, change these values by hand in one pull request and let build_web (unit tests + browser smoke) judge it. See AGENTS.md \"Frozen inputs\".",
+  "sources": {
+    "abap2UI5": {
+      "url": "https://github.com/abap2UI5/abap2UI5",
+      "commit": "2e34e840a601e0ddd77c4d1113ad63cd5f5fdbdb",
+      "dir": "abap2UI5"
+    },
+    "samples": {
+      "url": "https://github.com/abap2UI5/samples",
+      "commit": "2e998ef1c90a1350e4ce1677bba59122fc8dac96",
+      "dir": "abap2UI5-samples"
+    },
+    "open-abap-core": {
+      "url": "https://github.com/open-abap/open-abap-core",
+      "commit": "c677145204bbbaac2be2a615ea53ad5dd8a36aa9",
+      "dir": "deps/open-abap-core"
+    },
+    "express-icf-shim": {
+      "url": "https://github.com/open-abap/express-icf-shim",
+      "commit": "996eb798ff8aa0a302c6672e95b1fde7b95bcbe3",
+      "dir": "deps/express-icf-shim"
+    }
+  },
+  "ui5": "1.136.21"
+}

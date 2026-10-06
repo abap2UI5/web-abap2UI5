@@ -13,7 +13,7 @@ stands in for the database, the frontend HTML is served by the transpiled
 
 | | |
 |---|---|
-| Built by | [abap2UI5/web-abap2UI5](https://github.com/abap2UI5/web-abap2UI5) — workflow `build_web.yaml`, daily |
+| Built by | [abap2UI5/web-abap2UI5](https://github.com/abap2UI5/web-abap2UI5) — workflow `build_web.yaml`, on change only (the inputs are pinned) |
 | Built from | [abap2UI5](https://github.com/abap2UI5/abap2UI5) + [samples](https://github.com/abap2UI5/samples) — `BUILD_INFO.json` names the exact commits |
 | Report a problem | with the browser build: [web-abap2UI5](https://github.com/abap2UI5/web-abap2UI5/issues) · with the framework: [abap2UI5](https://github.com/abap2UI5/abap2UI5/issues) |
 
@@ -27,8 +27,7 @@ source file.
 | `index.html`, `app.bundle.js` | the webpack bundle: transpiled backend, runtime and boot code |
 | `sql-wasm-browser.wasm` | SQLite (sql.js), standing in for the database |
 | `css/style.css` | the stylesheet the z2ui5 frontend manifest asks for |
-| `BUILD_INFO.json` | provenance: the upstream commits and the run this build came from |
-| `build-stamp.txt` | the same three commits as `<abap2UI5>-<samples>-<web-abap2UI5>`; the daily build reads it back to skip rebuilding unchanged inputs |
+| `BUILD_INFO.json` | provenance: the pinned upstream commits, the UI5 release and the run this build came from |
 | `404.html` | redirects stray paths back to the app |
 
 Each commit here is one deployment, so `git log` is the deployment history.
