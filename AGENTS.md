@@ -9,9 +9,12 @@ A build pipeline, not a framework. It clones [abap2UI5](https://github.com/abap2
 and [samples](https://github.com/abap2UI5/samples), downports them with
 abaplint, transpiles them to JavaScript with `@abaplint/transpiler`, and
 webpacks the result into a single bundle that runs the **whole backend inside
-the browser tab** — sql.js stands in for the database. The daily `build_web`
+the browser tab** — sql.js stands in for the database. The `build_web`
 workflow deploys it to [web-abap2UI5-build](https://github.com/abap2UI5/web-abap2UI5-build)
 (<https://abap2ui5.github.io/web-abap2UI5-build/>).
+
+**The demo is frozen** — see "Frozen inputs" below. It does not follow
+upstream any more; it changes only when someone changes this repository.
 
 Nothing under `src/`, `downport/`, `output/`, `build/` is a source file — all
 four are gitignored build products. Framework fixes belong upstream in
@@ -175,10 +178,10 @@ comment at the code; this list exists so nobody deletes one without reading it.
   `ci/patch_diss_oref.mjs` (`z2ui5_cl_abap2ui5_context` →
   `z2ui5_cl_a2ui5_context` → `z2ui5_cl_ui5_util_context`) and the two target
   file names (`z2ui5_cl_core_srv_model` / `z2ui5_cl_ui5_srv_model`). This repo
-  builds against upstream's *current* main every night, so a patch that knows
-  only one name breaks the daily build on the day upstream renames — which is
-  exactly what happened on 2026-08-12. Add new spellings, never replace old
-  ones.
+  built against upstream's *current* main every night until the freeze, so a
+  patch that knew only one name broke the daily build on the day upstream
+  renamed — which is exactly what happened on 2026-08-12. Add new spellings,
+  never replace old ones: a pin bump can cross any of the renames.
 
 - **The browser smoke gate** (`tests/web.spec.js`, run before the deploy).
   Everything upstream of it can be green while the deployed page is blank: a
@@ -193,19 +196,45 @@ repository is exactly what `./build` contains — files committed there by hand
 are gone with the next run. Anything visitors should find ships from
 `app/pages/` and the copy step in the workflow.
 
-`build-stamp.txt` is not documentation: the scheduled run curls it back from
-the deployed site and compares it as one opaque string to decide whether the
-inputs changed. Do not change its format or filename without teaching the read
-side to also understand the *old*, already deployed shape — otherwise the first
-run after the change compares against something it cannot parse.
-`BUILD_INFO.json` is the human-readable companion and is read by nobody.
+`BUILD_INFO.json` records what the deploy was built from (the pins, the UI5
+release, this repository's commit) and is read by nobody. The old
+`build-stamp.txt` went with the daily cron, its only reader.
+
+## Frozen inputs
+
+Until 2026-10-06 a daily cron rebuilt the demo from the *tip* of abap2UI5 and
+samples (and the transpiler and abaplint cloned the tip of open-abap-core and
+express-icf-shim on every run), and the page booted the *newest* UI5 from the
+CDN's cachebuster URL. Every one of those could turn the demo red without a
+change here, and did — more scheduled runs failed than passed in the weeks
+before. The demo is now frozen on the last combination that deployed green
+(2026-10-01):
+
+- **`ci/pins.json`** holds every external input: the commit of abap2UI5,
+  samples, open-abap-core and express-icf-shim, and the UI5 release.
+  `ci/clone.mjs` fetches each source at exactly its commit (`npm run clone`);
+  the transpiler and abaplint read open-abap-core / express-icf-shim from
+  `deps/` instead of cloning them. `app/web.mjs` rewrites the bootstrap `src`
+  to `https://sdk.openui5.org/<ui5>/resources/sap-ui-core.js`. The UI5 pin is
+  the 1.136 long-term-maintenance line, so the CDN keeps serving it for years;
+  abap2UI5 supports UI5 down to 1.71.
+- **No schedule.** `build_web` runs on push to main (and deploys), on pull
+  requests and by hand. A build of the same commit reads the same inputs.
+- **No Dependabot.** `package-lock.json` decides every npm version (`npm ci`),
+  actions are SHA-pinned, the runner is `ubuntu-24.04`, Node comes from
+  `.nvmrc`.
+
+To refresh the demo, change the pins (and, if needed, `@abaplint/cli` and the
+`@abaplint/*` tooling) by hand in one pull request; `build_web` — unit tests and
+the browser smoke — is the verdict. Do not reintroduce a schedule or a
+branch-tip clone: the point of the freeze is that nothing moves on its own.
 
 ## Pins
 
 `@abaplint/cli` is pinned exactly (no caret) to the version abap2UI5 itself
 syntax-checks with — the downport result has to pass the same check as
-upstream's source. Bump it together with abap2UI5's pin, by hand; Dependabot is
-told to ignore it (`.github/dependabot.yml`). `ci/check-abaplint-pin.mjs`
+upstream's source — at the abap2UI5 commit in `ci/pins.json`. Bump it together
+with that pin, by hand. `ci/check-abaplint-pin.mjs`
 (run by `npm run clone`, so every build sees it) fails when the pin falls out
 of lockstep — the rule was prose only until the pin sat at 2.120.3 while
 upstream had long resolved 2.120.33.

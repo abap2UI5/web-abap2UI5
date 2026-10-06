@@ -4,7 +4,9 @@
 complete abap2UI5 backend, downported, transpiled to JavaScript and running
 inside your browser tab. No server, no SAP system.
 
-The build is rebuilt daily from the current abap2UI5 and samples sources and
+The build is **frozen**: abap2UI5, samples, the open-abap libraries and the
+UI5 release are pinned in [ci/pins.json](ci/pins.json), there is no scheduled
+rebuild, and the demo only changes when this repository does. It is
 deployed to [web-abap2UI5-build](https://github.com/abap2UI5/web-abap2UI5-build)
 (GitHub Pages). Contributor and agent guidance lives in [AGENTS.md](AGENTS.md).
 
@@ -76,7 +78,7 @@ when ffmpeg is installed. [media/record.mjs](media/record.mjs) documents
 all options, including offline recording via `--ui5-from`.
 
 ### CI
-The `build_web` workflow runs daily: it clones [abap2UI5](https://github.com/abap2UI5/abap2UI5) and the top-level apps of [samples](https://github.com/abap2UI5/samples), runs downport, transpile, unit tests and the webpack build, then **smoke tests the built site in a real browser** before deploying it to [web-abap2UI5-build](https://github.com/abap2UI5/web-abap2UI5-build) (GitHub Pages). Note: GitHub disables scheduled workflows after 60 days without repository activity — re-enable it under Actions if the demo stops updating.
+The `build_web` workflow runs on every push to main (and deploys), on pull requests and by hand — there is no schedule: it clones [abap2UI5](https://github.com/abap2UI5/abap2UI5) and the top-level apps of [samples](https://github.com/abap2UI5/samples), runs downport, transpile, unit tests and the webpack build, then **smoke tests the built site in a real browser** before deploying it to [web-abap2UI5-build](https://github.com/abap2UI5/web-abap2UI5-build) (GitHub Pages). Every clone is the commit pinned in `ci/pins.json`, so a rerun of the same commit builds the same demo.
 
 The browser gate is the one that matters: everything upstream of it can be green while the deployed page is blank, because a bundling or initialization fault only shows when the bundle actually runs. `tests/web.spec.js` loads the freshly built `./build`, waits for the in-browser backend to answer, and asserts an event roundtrip restores the saved draft. Before it existed, the site deployed completely untested.
 
@@ -85,14 +87,13 @@ npm run build:web   # build ./build
 npm run test:e2e    # the same gate, locally (playwright, project chromium-web)
 ```
 
-`@abaplint/cli` is pinned to the version used by abap2UI5 itself, since the downport result must pass the same syntax check. Dependabot is told to leave that pin alone — see `.github/dependabot.yml`.
+`@abaplint/cli` is pinned to the version used by abap2UI5 itself, since the downport result must pass the same syntax check — at the pinned abap2UI5 commit. There is no Dependabot: `package-lock.json` decides every npm version.
 
 The deploy is a **production** webpack build. Two Terser defaults have to be turned off for it (`keep_classnames`, `keep_fnames`) because the transpiled ABAP carries its type system in the class and function names that RTTI reads back — see the comment in `webpack.config.js`.
 
 The deployed site is not only the bundle: `app/pages/` (README, 404 page) and
 this repository's `LICENSE` are copied into `./build` before the deploy, and
-the build's provenance is written as `build-stamp.txt` plus a human-readable
-`BUILD_INFO.json`. The deploy runs with `force_orphan: true`, so anything
+the build's provenance is written as `BUILD_INFO.json`. The deploy runs with `force_orphan: true`, so anything
 committed in the artifact repository by hand is gone with the next run — every
 file that should be there has to be produced here.
 

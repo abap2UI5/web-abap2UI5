@@ -3,6 +3,7 @@
 // guarantees the class registration order in every ESM runtime and bundler.
 // Webpack still produces a single bundle via dynamicImportMode: "eager".
 import {initializeABAP} from "../output/_init.mjs";
+import pins from "../ci/pins.json";
 
 // Boot sequence of the all-in-browser demo:
 // 1. initialize the transpiled ABAP backend (sql.js database + abap runtime)
@@ -11,7 +12,8 @@ import {initializeABAP} from "../output/_init.mjs";
 //    the same page a real server serves, including the sap.ui.require.preload
 //    of the complete current UI5 frontend) and document.write it.
 // This way the webpacked demo always runs the frontend version embedded in
-// the freshly cloned backend - no static frontend copy to keep up to date.
+// the pinned backend clone (ci/pins.json) - no static frontend copy to keep
+// up to date.
 
 await initializeABAP();
 
@@ -190,6 +192,26 @@ try {
     throw new Error("web.mjs: no sap-ui-bootstrap script tag found in the backend HTML");
   }
   html = html.replace(BOOTSTRAP_TAG, unloadShim + "$&");
+
+  // Boot exactly the UI5 release pinned in ci/pins.json, never the CDN's
+  // cachebuster URL the backend writes by default (z2ui5_cl_ui5_user_exit):
+  // that URL is always the NEWEST release, so the deployed demo changed
+  // whenever the CDN did - the 1.152 FetchInterceptor note above is the day
+  // it turned the same commit red. The demo is frozen (AGENTS.md "Frozen
+  // inputs"), so is its UI5. Same tag-matching rule as the shim: only the
+  // real bootstrap tag, the one carrying data-sap-ui-* attributes.
+  const UI5_SRC = `https://sdk.openui5.org/${pins.ui5}/resources/sap-ui-core.js`;
+  const BOOTSTRAP_OPEN_TAG = /<script[^>]*\bid="sap-ui-bootstrap"[^>]*\bdata-sap-ui-[^>]*>/i;
+  let srcPinned = false;
+  html = html.replace(BOOTSTRAP_OPEN_TAG, (tag) => tag.replace(/\bsrc="[^"]*"/i, () => {
+    srcPinned = true;
+    return `src="${UI5_SRC}"`;
+  }));
+  if (!srcPinned) {
+    // a page that silently boots the newest UI5 again is the very drift
+    // the pin exists to stop - fail as loudly as the shim does
+    throw new Error("web.mjs: no src attribute on the sap-ui-bootstrap script tag to pin to UI5 " + pins.ui5);
+  }
 
   // document.open() is a no-op while the initial document is still being
   // parsed - wait until the loader page finished parsing.
