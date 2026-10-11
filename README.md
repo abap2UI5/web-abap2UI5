@@ -51,7 +51,7 @@ npm run serve:express
 npm run build:web
 ```
 
-The bundle contains no static frontend copy: at runtime `app/web.mjs` initializes the transpiled backend, issues an in-memory HTTP GET against it (the same `z2ui5_cl_http_handler` GET that serves real systems, including the `sap.ui.require.preload` of the complete current UI5 frontend) and `document.write`s the returned page. Frontend and backend are therefore always the versions cloned that day. The backend's Content-Security-Policy meta tag is stripped from the written page — it is designed for server-served deployments (no `unsafe-eval`/`wasm-unsafe-eval`) and would break the wasm/eval-based in-browser runtime while protecting nothing here.
+The bundle contains no static frontend copy: at runtime `app/web.mjs` initializes the transpiled backend, issues an in-memory HTTP GET against it (the same `z2ui5_cl_http_handler` GET that serves real systems, including the `sap.ui.require.preload` of the complete current UI5 frontend) and `document.write`s the returned page. Frontend and backend are therefore always the same abap2UI5 commit, the one pinned in `ci/pins.json`. The backend's Content-Security-Policy meta tag is stripped from the written page — it is designed for server-served deployments (no `unsafe-eval`/`wasm-unsafe-eval`) and would break the wasm/eval-based in-browser runtime while protecting nothing here.
 
 Test the build locally (webpack-dev-server HMR does not work with the `document.write` boot):
 
