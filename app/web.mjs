@@ -85,10 +85,10 @@ async function readRequest(input, options) {
       body: Buffer.from(await input.arrayBuffer()),
     };
   }
-  const headers = {};
-  for (const [name, value] of Object.entries(options.headers || {})) {
-    headers[name.toLowerCase()] = String(value);
-  }
+  // init.headers takes every shape the Fetch API does - a plain object, an
+  // array of pairs or a Headers instance, whose fields Object.entries( )
+  // does not see. Headers reads all three and lowercases the names.
+  const headers = Object.fromEntries(new Headers(options.headers || {}));
   return {
     url: String(input),
     method: options.method || "GET",
