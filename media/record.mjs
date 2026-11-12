@@ -29,9 +29,9 @@
  *                     samples-controls checkout's node_modules) - for
  *                     recording on machines without internet egress
  *
- * ffmpeg is looked up on PATH, then in Playwright's browser cache
- * (its bundled build encodes GIF; MP4 needs a full ffmpeg install).
- * Override with A2UI5_MEDIA_FFMPEG; A2UI5_MEDIA_CHROMIUM points the
+ * ffmpeg is taken from A2UI5_MEDIA_FFMPEG, else looked up on PATH
+ * (Playwright's bundled build is not used: it has no GIF muxer and no
+ * libx264; MP4 needs a full ffmpeg install). A2UI5_MEDIA_CHROMIUM points the
  * recorder at a preinstalled Chromium instead of Playwright's own.
  */
 import { chromium } from '@playwright/test';
@@ -91,14 +91,15 @@ function convert(ffmpeg, webm, target, args) {
   return false;
 }
 
-async function runStep(page, step, shots) {
+async function runStep(page, step) {
   if (step.wait) return page.waitForTimeout(step.wait);
   if (step.click) return page.click(step.click);
   if (step.fill) return page.fill(step.fill[0], step.fill[1]);
   if (step.type) return page.type(step.type[0], step.type[1], { delay: 80 });
   if (step.press) return page.keyboard.press(step.press);
   if (step.hover) return page.hover(step.hover);
-  if (step.screenshot) return shots.push(step.screenshot);
+  // taken in place, so the shot shows the page at this point of the script
+  if (step.screenshot) return page.screenshot({ path: path.join(outDir, `${args.app}.${step.screenshot}.png`), fullPage: true });
   throw new Error(`unknown step: ${JSON.stringify(step)}`);
 }
 
@@ -142,7 +143,6 @@ if (args.ui5From) {
   });
 }
 
-const shots = [];
 try {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   // the web build boots a wasm database plus the transpiled backend first;
@@ -151,11 +151,8 @@ try {
   await page.waitForSelector('body *[data-sap-ui]', { timeout: 90000 });
   await page.waitForTimeout(args.settle);
   for (const step of steps) {
-    await runStep(page, step, shots);
+    await runStep(page, step);
     await page.waitForTimeout(args.pace);
-  }
-  for (const name of shots.length ? shots : []) {
-    await page.screenshot({ path: path.join(outDir, `${args.app}.${name}.png`), fullPage: true });
   }
   await page.screenshot({ path: path.join(outDir, `${args.app}.png`), fullPage: true });
   await page.waitForTimeout(args.hold);

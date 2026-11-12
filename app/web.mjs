@@ -8,7 +8,7 @@ import pins from "../ci/pins.json";
 // Boot sequence of the all-in-browser demo:
 // 1. initialize the transpiled ABAP backend (sql.js database + abap runtime)
 // 2. route fetch() calls addressed to this page into the transpiled backend
-// 3. GET the frontend HTML from the backend (z2ui5_cl_http_handler->_http_get,
+// 3. GET the frontend HTML from the backend (z2ui5_cl_ui5_http_handler->_http_get,
 //    the same page a real server serves, including the sap.ui.require.preload
 //    of the complete current UI5 frontend) and document.write it.
 // This way the webpacked demo always runs the frontend version embedded in
