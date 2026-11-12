@@ -7,7 +7,7 @@ by hand.**
 The whole abap2UI5 backend, downported, transpiled to JavaScript and bundled
 into a single script that runs inside the browser tab: SQLite compiled to wasm
 stands in for the database, the frontend HTML is served by the transpiled
-`z2ui5_cl_http_handler` in-process, and there is no server behind it at all.
+`z2ui5_cl_ui5_http_handler` in-process, and there is no server behind it at all.
 
 **Live: <https://abap2ui5.github.io/web-abap2UI5-build/>**
 

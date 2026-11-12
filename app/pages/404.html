@@ -3,7 +3,11 @@
 <head>
   <meta charset="utf-8">
   <title>abap2UI5 in the browser — not found</title>
-  <meta http-equiv="refresh" content="3; url=./index.html">
+  <!-- Absolute on purpose: GitHub Pages serves this page AT the missing path,
+       so a relative ./index.html resolves next to it, is missing too, and
+       reloads this page forever. The deploy is a project page of
+       abap2UI5/web-abap2UI5-build, hence the /web-abap2UI5-build/ prefix. -->
+  <meta http-equiv="refresh" content="3; url=/web-abap2UI5-build/">
   <style>
     body { font-family: system-ui, sans-serif; margin: 4rem auto; max-width: 34rem; padding: 0 1rem; }
     a { color: #0064d9; }
@@ -12,6 +16,6 @@
 <body>
   <h1>Not found</h1>
   <p>That page is not part of the abap2UI5 browser demo.</p>
-  <p>Taking you <a href="./index.html">back to the app</a>&nbsp;…</p>
+  <p>Taking you <a href="/web-abap2UI5-build/">back to the app</a>&nbsp;…</p>
 </body>
 </html>

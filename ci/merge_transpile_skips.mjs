@@ -18,9 +18,8 @@
  *
  * So the list is no longer copied. `clone:core` already puts upstream's
  * checkout in `abap2UI5/`; this reads the skip array out of it and writes the
- * config the transpiler actually runs. Same reasoning as the abaplint
- * downport shim in AGENTS.md: it is upstream's file, run from the clone,
- * never a copy.
+ * config the transpiler actually runs: it is upstream's file, read from the
+ * clone, never a copy.
  *
  * `ci/abap_transpile.json` stays the checked-in base and keeps everything
  * about THIS pipeline (folders, setup hook, keywords). Its own `skip` array
