@@ -1,4 +1,4 @@
-# AGENTS.md — web-abap2UI5
+# AGENTS.md — browser-demo
 
 Guidance for AI agents and contributors. Single source of truth for this
 repository's rules. Read before making any change.
@@ -10,8 +10,13 @@ and [samples](https://github.com/abap2UI5/samples), downports them with
 abaplint, transpiles them to JavaScript with `@abaplint/transpiler`, and
 webpacks the result into a single bundle that runs the **whole backend inside
 the browser tab** — sql.js stands in for the database. The `build_web`
-workflow deploys it to [web-abap2UI5-build](https://github.com/abap2UI5/web-abap2UI5-build)
-(<https://abap2ui5.github.io/web-abap2UI5-build/>).
+workflow publishes it to this repository's GitHub Pages
+(<https://abap2ui5.github.io/browser-demo/>).
+
+Until 2026-11 the repository was called `web-abap2UI5` and pushed the build
+with a deploy key into a second repository, `web-abap2UI5-build`, that existed
+only to be served. That repository is archived and only redirects its old URL
+here; do not deploy to it again.
 
 **The demo is frozen** — see "Frozen inputs" below. It does not follow
 upstream any more; it changes only when someone changes this repository.
@@ -25,7 +30,7 @@ abap2UI5, not here.
 | `ci/` | transpile + downport config, the gates that keep them in lockstep with upstream, and the post-processing patches (below) |
 | `srv/` | Node-side entry points: express host, static build server, `ZCL_SICF` |
 | `app/` | browser entry: `web.mjs` (boot), `index.html`, `css/`, `pages/` |
-| `app/pages/` | README + 404 page copied into the deploy — the artifact repo's own files |
+| `app/pages/` | the 404 page copied into the deploy |
 | `tests/web.spec.js` | the browser smoke gate (Playwright project `chromium-web`) |
 
 ## Build & test
@@ -170,10 +175,13 @@ comment at the code; this list exists so nobody deletes one without reading it.
 
 ## Deploy
 
-`build_web.yaml` deploys `./build` with `force_orphan: true`, so the published
-repository is exactly what `./build` contains — files committed there by hand
-are gone with the next run. Anything visitors should find ships from
-`app/pages/` and the copy step in the workflow.
+`build_web.yaml` uploads `./build` as the Pages artifact and a separate
+`deploy` job (the only one holding `pages: write` and `id-token: write`)
+publishes it — on `main` of `abap2UI5/browser-demo` only, after the unit tests
+and the browser smoke. The site is exactly what `./build` contains; anything
+visitors should find ships from `app/pages/` and the copy step in the
+workflow. The repository's Pages source has to be set to "GitHub Actions".
+The deploy history is the `github-pages` environment.
 
 `BUILD_INFO.json` records what the deploy was built from (the pins, the UI5
 release, this repository's commit) and is read by nobody. The old

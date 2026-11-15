@@ -17,7 +17,7 @@
  * Options:
  *   --app <class>     app class to start (appended as ?app_start=)  [required]
  *   --url <base>      page that boots abap2UI5
- *                     default: https://abap2ui5.github.io/web-abap2UI5-build/
+ *                     default: https://abap2ui5.github.io/browser-demo/
  *   --steps <file>    JSON array of interaction steps, see media/steps.example.json
  *   --size <preset>   desktop (1280x720) | phone (414x896) | tablet (834x1112) | <W>x<H>
  *   --out <dir>       output directory                     [default: media-out]
@@ -44,7 +44,7 @@ const SIZES = {
   phone: { width: 414, height: 896 },
   tablet: { width: 834, height: 1112 },
 };
-const DEFAULT_URL = 'https://abap2ui5.github.io/web-abap2UI5-build/';
+const DEFAULT_URL = 'https://abap2ui5.github.io/browser-demo/';
 
 function parseArgs(argv) {
   const a = { url: DEFAULT_URL, size: 'desktop', out: 'media-out', settle: 2500, pace: 800, hold: 1500 };
