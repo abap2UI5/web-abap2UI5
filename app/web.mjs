@@ -1,8 +1,11 @@
-// _init.mjs is rewritten by ci/patch_init_order.mjs (npm run build:transpile) to
-// load every transpiled module with a sequential await import(), which
-// guarantees the class registration order in every ESM runtime and bundler.
-// Webpack still produces a single bundle via dynamicImportMode: "eager".
-import {initializeABAP} from "../output/_init.mjs";
+// output/ is written by ci/transpile.mjs (npm run build:transpile): the
+// framework of @abap2ui5/node-runtime and the samples, in one transpile.
+// init.mjs loads every transpiled module with a sequential await import(),
+// which guarantees the class registration order in every ESM runtime and
+// bundler (the transpiler writes it that way from 2.14 on; before, a patch
+// script here did). Webpack still produces a single bundle via
+// dynamicImportMode: "eager".
+import {initializeABAP} from "../output/init.mjs";
 import pins from "../ci/pins.json";
 
 // Boot sequence of the all-in-browser demo:
@@ -12,8 +15,8 @@ import pins from "../ci/pins.json";
 //    the same page a real server serves, including the sap.ui.require.preload
 //    of the complete current UI5 frontend) and document.write it.
 // This way the webpacked demo always runs the frontend version embedded in
-// the pinned backend clone (ci/pins.json) - no static frontend copy to keep
-// up to date.
+// the pinned backend (@abap2ui5/node-runtime in package.json) - no static
+// frontend copy to keep up to date.
 
 await initializeABAP();
 

@@ -35,8 +35,10 @@ module.exports = (env = {}) => ({
   },
   resolve: {
     fallback: {
-      "./%23ui2%23cl_json.clas.mjs": false,
-      "crypto": false,
+      "./open-abap-core/%23ui2%23cl_json.clas.mjs": false,
+      // Not `false` any more: the backend hashes on every roundtrip, see the
+      // file for why this one function has to be real.
+      "crypto": path.resolve(__dirname, "app/crypto-shim.mjs"),
       "path": require.resolve("path-browserify"),
       "buffer": require.resolve("buffer/"),
       "util/types": false,
@@ -118,9 +120,9 @@ module.exports = (env = {}) => ({
       Buffer: ['buffer', 'Buffer'],
     }),
     // The transpiled output loads every module via top-level `await import()`
-    // (see ci/patch_init_order.mjs), which webpack would otherwise split into
-    // one tiny async chunk per ABAP object — 1700+ files and ~1000 requests
-    // on GitHub Pages. Merging everything into a single chunk keeps the
+    // (the transpiler writes output/init.mjs that way), which webpack would
+    // otherwise split into one tiny async chunk per ABAP object — 1700+ files
+    // and ~1000 requests on GitHub Pages. Merging everything into a single chunk keeps the
     // deterministic initialization order but ships one bundle.
     new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
   ],

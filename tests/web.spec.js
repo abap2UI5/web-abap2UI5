@@ -51,10 +51,12 @@ test('webpack build boots the backend-served frontend', async ({ page }) => {
 
 // Regression test for the draft save/load cycle: the first roundtrip
 // persists the app as a draft, an event roundtrip (like the startup app's
-// "Check" button) restores it via db_load. Without the dissolve guard
-// (ci/patch_diss_oref.mjs) the restore died with "LOOP at undefined",
-// surfacing as "Network error: LOOP at undefined" on every button press of
-// the GitHub Pages demo. Fires the POSTs directly against the in-browser
+// "Check" button) restores it via db_load. Without a dissolve guard the
+// restore died with "LOOP at undefined", surfacing as "Network error: LOOP
+// at undefined" on every button press of the GitHub Pages demo - the guard
+// was a source patch of this repository once and is the framework's own now
+// (z2ui5_cl_ui5_srv_model=>diss_oref). The same spec is what reported the
+// missing crypto.createHash (app/crypto-shim.mjs): every POST hashes. Fires the POSTs directly against the in-browser
 // backend's fetch override, so no UI5 CDN access is needed.
 test('event roundtrip restores the saved draft (BUTTON_CHECK)', async ({ page }) => {
   test.setTimeout(240000);
