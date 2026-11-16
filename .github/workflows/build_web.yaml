@@ -43,8 +43,11 @@ jobs:
       with:
         path: ~/.cache/ms-playwright
         key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+    # The samples at their pin (ci/pins.json). abap2UI5 itself is not cloned:
+    # it is the npm package @abap2ui5/node-runtime, installed by `npm ci`.
     - run: npm run clone
-    # `npm test` is downport + transpile + the transpiled unit tests. It is
+    # `npm test` is the transpile (the package's framework sources and the
+    # samples, ci/transpile.mjs) + the samples' transpiled unit tests. It is
     # spelled as the plain lifecycle script on purpose: what CI runs as "the
     # tests" and what a contributor runs locally have to be the same command.
     - run: npm test
@@ -70,15 +73,23 @@ jobs:
     - name: Add the 404 page to the deploy
       run: cp app/pages/404.html build/
     # What the deployed demo was built from, for a human who wants to know.
-    # The sources are the pins in ci/pins.json, so this file names exactly
-    # the commits and the UI5 release a rebuild of the same commit reads.
+    # The sources are the framework package (its release commit and the two
+    # library commits it records) and the pins in ci/pins.json, so this file
+    # names exactly the commits and the UI5 release a rebuild of the same
+    # commit reads.
     # (build-stamp.txt is gone: only the retired daily cron ever read it.)
     - name: Write build info
       run: |
         set -euo pipefail
         node -e '
           const pins = require("./ci/pins.json");
-          const sources = Object.fromEntries(Object.entries(pins.sources).map(([k, v]) => [k, v.url + "/tree/" + v.commit]));
+          const runtime = require("@abap2ui5/node-runtime/package.json");
+          const sources = {
+            "abap2UI5": "https://github.com/abap2UI5/abap2UI5/tree/" + runtime.abap2ui5.commit,
+            "open-abap-core": "https://github.com/open-abap/open-abap-core/tree/" + runtime.abap2ui5.openAbapCore,
+            "express-icf-shim": "https://github.com/open-abap/express-icf-shim/tree/" + runtime.abap2ui5.expressIcfShim,
+            ...Object.fromEntries(Object.entries(pins.sources).map(([k, v]) => [k, v.url + "/tree/" + v.commit])),
+          };
           sources["browser-demo"] = "https://github.com/abap2UI5/browser-demo/tree/" + process.env.GITHUB_SHA;
           require("fs").writeFileSync("build/BUILD_INFO.json", JSON.stringify({
             live_url: "https://abap2ui5.github.io/browser-demo/",
@@ -86,6 +97,7 @@ jobs:
             built_by: "https://github.com/abap2UI5/browser-demo/actions/runs/" + process.env.GITHUB_RUN_ID,
             workflow: ".github/workflows/build_web.yaml",
             ui5: pins.ui5,
+            "node-runtime": runtime.name + "@" + runtime.version,
             sources,
           }, null, 2) + "\n");
         '

@@ -5,39 +5,48 @@ repository's rules. Read before making any change.
 
 ## What this repo is
 
-A build pipeline, not a framework. It clones [abap2UI5](https://github.com/abap2UI5/abap2UI5)
-and [samples](https://github.com/abap2UI5/samples), downports them with
-abaplint, transpiles them to JavaScript with `@abaplint/transpiler`, and
-webpacks the result into a single bundle that runs the **whole backend inside
-the browser tab** — sql.js stands in for the database. The `build_web`
-workflow publishes it to this repository's GitHub Pages
-(<https://abap2ui5.github.io/browser-demo/>).
+A browser build, not a framework - and not a pipeline of its own any more.
+[abap2UI5](https://github.com/abap2UI5/abap2UI5) downports and transpiles
+itself and publishes the result as the npm package
+[`@abap2ui5/node-runtime`](https://www.npmjs.com/package/@abap2ui5/node-runtime).
+This repository takes that package, adds the [samples](https://github.com/abap2UI5/samples)
+to it in one transpile (the package's own recipe for "your own apps",
+`ci/transpile.mjs`), and webpacks the result into a single bundle that runs
+the **whole backend inside the browser tab** — sql.js stands in for the
+database. The `build_web` workflow publishes it to this repository's GitHub
+Pages (<https://abap2ui5.github.io/browser-demo/>).
 
 Until 2026-11 the repository was called `web-abap2UI5` and pushed the build
 with a deploy key into a second repository, `web-abap2UI5-build`, that existed
 only to be served. That repository is archived and only redirects its old URL
 here; do not deploy to it again.
 
+Until 2026-11 this repository cloned abap2UI5 and ran the whole downport and
+transpile itself: a second copy of the framework's pipeline, with its own
+abaplint pin, its own copy of the downport rules and of the unit-test skip
+list, and three patch scripts to keep up with upstream. None of that is here
+now, on purpose - do not bring a clone of abap2UI5 back.
+
 **The demo is frozen** — see "Frozen inputs" below. It does not follow
 upstream any more; it changes only when someone changes this repository.
 
-Nothing under `src/`, `downport/`, `output/`, `build/` is a source file — all
-four are gitignored build products. Framework fixes belong upstream in
+Nothing under `abap2UI5-samples/`, `deps/`, `output/`, `build/` is a source
+file — all four are gitignored build products. Framework fixes belong upstream in
 abap2UI5, not here.
 
 | Path | What it is |
 |---|---|
-| `ci/` | transpile + downport config, the gates that keep them in lockstep with upstream, and the post-processing patches (below) |
-| `srv/` | Node-side entry points: express host, static build server, `ZCL_SICF` |
-| `app/` | browser entry: `web.mjs` (boot), `index.html`, `css/`, `pages/` |
+| `ci/` | `pins.json` (samples commit, UI5 release), `clone.mjs` (the samples at their pin), `transpile.mjs` (the package's transpile with the samples) |
+| `srv/` | Node-side entry points: the package's express host on this output, the static build server |
+| `app/` | browser entry: `web.mjs` (boot), `crypto-shim.mjs`, `process-shim.js`, `index.html`, `css/`, `pages/` |
 | `app/pages/` | the 404 page copied into the deploy |
 | `tests/web.spec.js` | the browser smoke gate (Playwright project `chromium-web`) |
 
 ## Build & test
 
 ```bash
-npm run clone       # clone:core + clone:samples into ./src
-npm test            # build (downport + transpile) + the transpiled unit tests
+npm run clone       # the samples at their pin into ./abap2UI5-samples
+npm test            # build (the transpile, ~20 s) + the samples' transpiled unit tests
 npm run build:web   # webpack production build into ./build
 npm run test:e2e    # the browser smoke against ./build (needs build:web first)
 ```
@@ -46,24 +55,47 @@ npm run test:e2e    # the browser smoke against ./build (needs build:web first)
 names are namespaced (`clone:*`, `build:*`, `test:*`, `serve:*`); a new script
 joins a namespace rather than inventing a bare name.
 
+`npm test` runs the unit tests of the samples only. The framework's own
+suite is not in the package (it leaves the test classes out, a third of its
+size) and is not this repository's to run: abap2UI5 runs it on the release
+commit before it publishes. What this repository adds - the samples on that
+framework, in a browser - is what `npm test` and the smoke judge.
+
 ## Things that look removable and are not
 
 Each of these was paid for with a broken deploy. The full story is in the
 comment at the code; this list exists so nobody deletes one without reading it.
 
-- **The `z2ui5_if_exit` copy-back in `clone:core`** (`package.json`). The clone
-  drops upstream's frozen `src/99` package, but one object in it is not dead
-  weight: `src/01/04/z2ui5_cl_ui5_user_exit` still declares a reference of type
-  `z2ui5_if_exit` and its test class still implements the interface, because
-  upstream keeps the superseded exit name working while the rename to
-  `z2ui5_if_ui5_exit` settles. Deleting the whole package therefore breaks the
-  downport with 10 unresolved-type / check_syntax errors — which is what every
-  scheduled build did from 2026-08-22 on, the morning after upstream retired
-  the interface into `src/99`. The interface (plus the package's
-  `package.devc.xml`) is copied back and nothing else; its three types are
-  declared AS the ones on `z2ui5_if_ui5_exit`, so it drags no further
-  dependency in. When upstream finally deletes `z2ui5_if_exit`, this copy-back
-  goes with it.
+- **The `exclude_filter` in `ci/transpile.mjs`, and the one interface it
+  lets through.** The package's `downport/` carries abap2UI5's frozen legacy
+  package `src/99` (`z2ui5_cl_xml_view`, the old `z2ui5_cl_util`, ...).
+  Nothing in the framework proper or in the samples uses it and it is 2.9 MiB
+  of the bundle (11.4 against 8.5 MiB on 1.148.0), so the transpile leaves it
+  out - except `z2ui5_if_exit`: `z2ui5_cl_ui5_user_exit` still declares a
+  reference of that type, because upstream keeps the superseded exit name
+  working. Dropping the whole folder broke every scheduled build from
+  2026-08-22 on. The transpile checks the syntax of all it reads, so a sample
+  that needs more of `src/99` fails the build by name; the fix belongs in the
+  sample. When upstream deletes `z2ui5_if_exit`, the exception goes with it.
+
+- **The exact pin of `@abaplint/transpiler-cli`** (`package.json`). It is the
+  version `@abap2ui5/node-runtime` was built with (`abap2ui5.transpiler` in
+  its `package.json`), and the package pins the `@abaplint/runtime` that
+  version's output runs on. The package's transpile refuses another
+  transpiler; `ci/transpile.mjs` refuses a second `@abaplint/runtime` at the
+  top of `node_modules`. Move it with the package, never alone - and do not
+  add `@abaplint/runtime` or `@abaplint/database-sqlite` as dependencies of
+  this repository: they come with the package, at its versions.
+
+- **`app/crypto-shim.mjs`, the `crypto` fallback in `webpack.config.js`.**
+  From abap2UI5 1.147.0 on every roundtrip hashes the model through open-abap's
+  `cl_abap_message_digest`, which calls Node's synchronous
+  `crypto.createHash`. With `crypto` resolved to nothing the page booted and
+  answered no request ("createHash is not a function") - what the browser
+  smoke reported on the move to 1.148.0. The shim computes the hash in
+  JavaScript (`@noble/hashes`; WebCrypto's digest is a promise) and exports
+  nothing else: `cl_system_uuid` falls back to `window.crypto.randomUUID( )`
+  only while the module has no `randomUUID` of its own.
 
 - **`keep_classnames` / `keep_fnames` in the Terser options**
   (`webpack.config.js`). The transpiled ABAP carries its type system in the
@@ -95,83 +127,37 @@ comment at the code; this list exists so nobody deletes one without reading it.
   `Response` and not a duck-typed look-alike: the interceptor hands the
   returned object to its `onResponse` hooks, which `clone()` it.
 
-- **`ci/patch_diss_oref.mjs`**. `DISS_OREF` resolves attribute chains through
-  the *dynamic* type in the transpiler runtime, so `dissolve()` walks from the
-  app's `CLIENT` down into the framework core and the draft save clears the
-  core app's own `MT_ATTRI` — every follow-up request then dies with "LOOP at
-  undefined" on the first button press. The guard skips framework core
-  instances only, named class by class: `Z2UI5_CL_UI5_*` as a wildcard would
-  also catch the demo *apps*, whose attributes must be dissolved.
-
-- **`ci/merge_transpile_skips.mjs`, and the empty `skip` array it fills**
-  (`ci/abap_transpile.json`). A few abap2UI5 unit tests cannot pass under the
-  transpiler — they cover behaviour the NodeJS runtime does not reproduce
-  (a dynamic `describe_by_name`, microsecond timestamps, a field-symbol type
-  check the runtime does not enforce). abap2UI5 lists them in
-  `node/setup/abap_transpile.json`, in the same commit as the test.
-
-  This repository transpiles those same sources and kept a hand-written
-  SECOND COPY of that list. The copy is what broke the nightly on 2026-08-03
-  (issue #63, `test_tab_ref_gen`) and again on 2026-09-02 (issue #84,
-  `test_skip_sorted_table`): upstream added the test and its skip entry
-  together, the clone here picked up the test and knew nothing about the
-  entry, and the build went red on a test upstream had already declared
-  unrunnable. The second time the skip entry was 57 minutes old.
-
-  So the list is read from the clone `clone:core` already makes, never
-  copied. The checked-in
-  `skip` array holds only entries upstream does NOT have; it is empty today
-  and an empty array is the correct state, not an oversight. The one entry it
-  used to carry alone — `ltcl_parser_test->parse_error`, noted "NodeJS 20 does
-  not set position of parsing error" — was stale: the pipeline runs Node 22,
-  the test passes, and skipping it had been hiding a green test for as long as
-  nobody re-read the note.
-
-  A missing or reshaped upstream list fails the build with a message naming
-  the path, because a silent fall back to the local half would be the drift
-  again, only quieter.
-
-- **`ci/merge_downport_config.mjs`, and the near-empty
-  `ci/abaplint-downport.jsonc` it completes.** Which abaplint rules run
-  alongside `downport`, and which syntax version they judge against, is a fact
-  about abap2UI5, not about this pipeline: the downport result here has to
-  pass the same check as upstream's source. That is the same rule the
-  `@abaplint/cli` pin follows under "Pins", and `ci/check-abaplint-pin.mjs`
-  already enforces the version half of it.
-
-  The rules half was a hand-written copy of upstream's
-  `.github/abaplint/abap_702.jsonc` — and it had already drifted, unnoticed:
-  upstream runs `xml_bom`, the copy did not. Nothing would ever have said so.
-
-  So rules and syntax are read from the clone. The checked-in file keeps only
-  what is genuinely this pipeline's — `global.files` and the dependency
-  folder, whose paths are relative to `ci/` and mean nothing upstream — plus a
-  `rules` object for local OVERRIDES, which is empty and correct that way. A
-  moved or reshaped upstream config fails the build with the path in the
-  message, for the same reason as the skip list above.
-
-- **`ci/patch_init_order.mjs`**. The transpiler emits static imports of async
-  modules; ES only guarantees they *start* in order, not that each finishes
-  before the next starts. Cross-class references made during
-  `class_constructor` go through `abap.Classes` and are invisible to the module
-  graph. Node happens to work, webpack does not. Rewriting the imports to
-  sequential top-level `await import(...)` makes the order deterministic
-  everywhere.
-
-- **The three historical spellings of the context class** in
-  `ci/patch_diss_oref.mjs` (`z2ui5_cl_abap2ui5_context` →
-  `z2ui5_cl_a2ui5_context` → `z2ui5_cl_ui5_util_context`) and the two target
-  file names (`z2ui5_cl_core_srv_model` / `z2ui5_cl_ui5_srv_model`). This repo
-  built against upstream's *current* main every night until the freeze, so a
-  patch that knew only one name broke the daily build on the day upstream
-  renamed — which is exactly what happened on 2026-08-12. Add new spellings,
-  never replace old ones: a pin bump can cross any of the renames.
-
 - **The browser smoke gate** (`tests/web.spec.js`, run before the deploy).
   Everything upstream of it can be green while the deployed page is blank: a
   bundling or initialization fault only shows when the bundle actually runs.
   It also caught the bootstrap-tag regex matching a string *inside* the
-  preload, see the comment in `app/web.mjs`.
+  preload, see the comment in `app/web.mjs`, and the missing `createHash`
+  above.
+
+## What went with the private pipeline
+
+Listed so nobody rebuilds one of them from the git history without knowing
+why it is gone:
+
+- `ci/patch_diss_oref.mjs` patched the framework's source before the
+  downport, so `dissolve( )` would not walk from an app's `CLIENT` into the
+  framework core (the draft save then cleared the core's `MT_ATTRI`, "LOOP at
+  undefined" on the first button press). The framework guards that itself now
+  (`z2ui5_cl_ui5_srv_model=>diss_oref`, by the client interface), and the
+  second spec of `tests/web.spec.js` - written for exactly that fault - is
+  green on the unpatched package. A framework fault belongs upstream; the
+  package's sources are not patched here.
+- `ci/patch_init_order.mjs` rewrote the static imports of `output/_init.mjs`
+  into sequential `await import( )`. The transpiler writes them that way
+  itself from 2.14 on (`output/init.mjs`, which `app/web.mjs` imports now).
+- `ci/merge_transpile_skips.mjs`, `ci/merge_downport_config.mjs`,
+  `ci/check-abaplint-pin.mjs` and the `@abaplint/cli` pin kept this
+  repository's copy of the framework's unit-test skip list, downport rules
+  and abaplint version in step with the clone. There is no downport here and
+  no framework test run, so there is nothing left to keep in step.
+- `srv/zcl_sicf.clas.abap` and `ci/setup.mjs`: the ICF handler and the
+  database hook are the package's (`downport/zcl_sicf.clas.abap`,
+  `setup/setup.mjs`).
 
 ## Deploy
 
@@ -194,15 +180,20 @@ samples (and the transpiler and abaplint cloned the tip of open-abap-core and
 express-icf-shim on every run), and the page booted the *newest* UI5 from the
 CDN's cachebuster URL. Every one of those could turn the demo red without a
 change here, and did — more scheduled runs failed than passed in the weeks
-before. The demo is now frozen on the last combination that deployed green
-(2026-10-01):
+before. The demo is frozen, and every input has exactly one place:
 
-- **`ci/pins.json`** holds every external input: the commit of abap2UI5,
-  samples, open-abap-core and express-icf-shim, and the UI5 release.
-  `ci/clone.mjs` fetches each source at exactly its commit (`npm run clone`);
-  the transpiler and abaplint read open-abap-core / express-icf-shim from
-  `deps/` instead of cloning them. `app/web.mjs` rewrites the bootstrap `src`
-  to `https://sdk.openui5.org/<ui5>/resources/sap-ui-core.js`. The UI5 pin is
+- **`package.json` / `package-lock.json`** hold abap2UI5 itself:
+  `@abap2ui5/node-runtime` at an exact version is one release commit of the
+  framework, downported by the framework's own pipeline. Its `package.json`
+  records the commits of open-abap-core and express-icf-shim it was built
+  against (`abap2ui5.openAbapCore`, `abap2ui5.expressIcfShim`) and its
+  transpiler (`abap2ui5.transpiler`); `ci/transpile.mjs` checks both
+  libraries out at exactly those commits into `deps/` and the transpiler is
+  pinned to exactly that version.
+- **`ci/pins.json`** holds what is not an npm package: the commit of the
+  samples (`ci/clone.mjs` fetches exactly it, `npm run clone`) and the UI5
+  release. `app/web.mjs` rewrites the bootstrap `src` to
+  `https://sdk.openui5.org/<ui5>/resources/sap-ui-core.js`. The UI5 pin is
   the 1.136 long-term-maintenance line, so the CDN keeps serving it for years;
   abap2UI5 supports UI5 down to 1.71.
 - **No schedule.** `build_web` runs on push to main (and deploys), on pull
@@ -211,17 +202,9 @@ before. The demo is now frozen on the last combination that deployed green
   actions are SHA-pinned, the runner is `ubuntu-24.04`, Node comes from
   `.nvmrc`.
 
-To refresh the demo, change the pins (and, if needed, `@abaplint/cli` and the
-`@abaplint/*` tooling) by hand in one pull request; `build_web` — unit tests and
-the browser smoke — is the verdict. Do not reintroduce a schedule or a
-branch-tip clone: the point of the freeze is that nothing moves on its own.
-
-## Pins
-
-`@abaplint/cli` is pinned exactly (no caret) to the version abap2UI5 itself
-syntax-checks with — the downport result has to pass the same check as
-upstream's source — at the abap2UI5 commit in `ci/pins.json`. Bump it together
-with that pin, by hand. `ci/check-abaplint-pin.mjs`
-(run by `npm run clone`, so every build sees it) fails when the pin falls out
-of lockstep — the rule was prose only until the pin sat at 2.120.3 while
-upstream had long resolved 2.120.33.
+To refresh the demo, move `@abap2ui5/node-runtime` (and
+`@abaplint/transpiler-cli` to the version it names) and the samples pin by
+hand in one pull request; `build_web` — the transpile, which type-checks the
+samples against that framework, the unit tests and the browser smoke — is the
+verdict. Do not reintroduce a schedule or a branch-tip clone: the point of
+the freeze is that nothing moves on its own.

@@ -1,13 +1,9 @@
-downport
 node_modules
-abap2UI5
 abap2UI5-samples
 deps
 output
 build
-src
 playwright-report
 test-results
 media-out
 ci/abap_transpile.run.json
-ci/abaplint-downport.run.jsonc

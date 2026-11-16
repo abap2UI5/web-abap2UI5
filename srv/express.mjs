@@ -1,26 +1,16 @@
-import express from 'express';
-import {initializeABAP} from "../output/init.mjs";
-import {cl_express_icf_shim} from "../output/cl_express_icf_shim.clas.mjs";
-await initializeABAP();
+// The transpiled backend on Node.js, by hand (`npm run serve:express`) - not
+// part of any test run. output/host.mjs is written by the transpile
+// (ci/transpile.mjs): the exports of @abap2ui5/node-runtime, bound to this
+// repository's output - the framework and the samples. serve( ) is the
+// package's express server: the ICF shim on every path, ZCL_SICF behind it.
+import {serve} from "../output/host.mjs";
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
-const app = express();
-app.disable('x-powered-by');
-app.set('etag', false);
-app.use(express.raw({type: "*/*", limit: "10mb"}));
-
-// ------------------
-
-app.all("/{*path}", async function (req, res) {
-  if (!req.body) { req.body = Buffer.alloc(0); }
-  await cl_express_icf_shim.run({req, res, class: "ZCL_SICF"});
-});
-
-const server = app.listen(PORT, () => {
+try {
+  await serve({port: PORT});
   console.log("Listening on http://localhost:" + PORT);
-});
-server.on("error", (err) => {
+} catch (err) {
   console.error("Failed to start server:", err.message);
   process.exit(1);
-});
+}
