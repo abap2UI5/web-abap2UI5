@@ -28,8 +28,8 @@
   },
   "homepage": "https://github.com/abap2UI5/browser-demo#readme",
   "devDependencies": {
-    "@abap2ui5/node-runtime": "1.148.0",
-    "@abaplint/transpiler-cli": "2.14.5",
+    "@abap2ui5/node-runtime": "1.149.0",
+    "@abaplint/transpiler-cli": "2.14.33",
     "@noble/hashes": "^2.4.0",
     "@playwright/test": "^1.64.0",
     "@types/node": "^22.20.5",
