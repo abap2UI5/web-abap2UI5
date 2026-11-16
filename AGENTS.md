@@ -69,9 +69,10 @@ comment at the code; this list exists so nobody deletes one without reading it.
 - **The `exclude_filter` in `ci/transpile.mjs`, and the one interface it
   lets through.** The package's `downport/` carries abap2UI5's frozen legacy
   package `src/99` (`z2ui5_cl_xml_view`, the old `z2ui5_cl_util`, ...).
-  Nothing in the framework proper or in the samples uses it and it is 2.9 MiB
-  of the bundle (11.4 against 8.5 MiB on 1.148.0), so the transpile leaves it
-  out - except `z2ui5_if_exit`: `z2ui5_cl_ui5_user_exit` still declares a
+  Nothing in the framework proper or in the samples uses it and it is 1.5 MiB
+  of the bundle (9.3 against 7.9 MiB on 1.149.0, where upstream has thinned
+  the package out; 11.4 against 8.5 MiB on 1.148.0), so the transpile leaves
+  it out - except `z2ui5_if_exit`: `z2ui5_cl_ui5_user_exit` still declares a
   reference of that type, because upstream keeps the superseded exit name
   working. Dropping the whole folder broke every scheduled build from
   2026-08-22 on. The transpile checks the syntax of all it reads, so a sample

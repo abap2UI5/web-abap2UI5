@@ -15,7 +15,8 @@
  *   1. open-abap-core and express-icf-shim at the commits the package
  *      records, once, under ./deps (a folder per commit)
  *   2. the package's own transpile config - the samples and downport/ as the
- *      two inputs - with the unit tests and the source maps switched on
+ *      two inputs, the unit tests switched on by its `unitTests` (from
+ *      1.149.0 on) - with the source maps and the exclusion below added
  *   3. the transpiler the package names (@abaplint/transpiler-cli, pinned to
  *      exactly that version in package.json - another one is refused)
  *
@@ -40,8 +41,8 @@ const OUTPUT = path.join(ROOT, "output");
 
 // abap2UI5's src/99 is its frozen legacy package (z2ui5_cl_xml_view, the old
 // z2ui5_cl_util, ...): nothing in the framework proper or in the samples
-// uses it, and it is a quarter of the bundle (2.9 of 11.4 MiB, measured on
-// 1.148.0). One object in it is not dead weight: z2ui5_cl_ui5_user_exit still
+// uses it, and it is a sixth of the bundle (1.5 of 9.3 MiB, measured on
+// 1.149.0; 2.9 of 11.4 MiB on 1.148.0). One object in it is not dead weight: z2ui5_cl_ui5_user_exit still
 // declares a reference of type z2ui5_if_exit, the superseded exit name
 // upstream keeps working - so that interface stays, and nothing else. The
 // transpile checks the syntax of everything it reads, so a sample or a
@@ -100,8 +101,8 @@ try {
     output: OUTPUT,
     core: libs["open-abap-core"],
     shim: libs["express-icf-shim"],
+    unitTests: true,
   });
-  config.write_unit_tests = true;
   config.write_source_map = true;
   config.exclude_filter = [LEGACY];
   const configFile = path.join(ROOT, "ci", "abap_transpile.run.json");
