@@ -61,16 +61,14 @@ jobs:
       run: npx playwright install-deps chromium
     - name: Smoke test the webpack build in a real browser
       run: npm run test:e2e
-    # The deploy is force_orphan, so the published repository is exactly what
-    # ./build contains - a file committed there by hand is gone with the next
-    # run. Everything a visitor should find (what this is, who built it, where
-    # to report a bug, where the live page is) therefore ships from here.
+    # The site is published from this repository (GitHub Pages, source
+    # "GitHub Actions"), so ./build is the whole page and nothing else: no
+    # README or LICENSE has to travel with it, as they did while the deploy
+    # went to the separate abap2UI5/web-abap2UI5-build repository. The 404
+    # page is the one file the site needs beside the bundle.
     # Must run after webpack, which cleans ./build.
-    - name: Add README, LICENSE and 404 page to the deploy
-      run: |
-        set -euo pipefail
-        cp app/pages/README.md app/pages/404.html build/
-        cp LICENSE build/
+    - name: Add the 404 page to the deploy
+      run: cp app/pages/404.html build/
     # What the deployed demo was built from, for a human who wants to know.
     # The sources are the pins in ci/pins.json, so this file names exactly
     # the commits and the UI5 release a rebuild of the same commit reads.
@@ -81,39 +79,46 @@ jobs:
         node -e '
           const pins = require("./ci/pins.json");
           const sources = Object.fromEntries(Object.entries(pins.sources).map(([k, v]) => [k, v.url + "/tree/" + v.commit]));
-          sources["web-abap2UI5"] = "https://github.com/abap2UI5/web-abap2UI5/tree/" + process.env.GITHUB_SHA;
+          sources["browser-demo"] = "https://github.com/abap2UI5/browser-demo/tree/" + process.env.GITHUB_SHA;
           require("fs").writeFileSync("build/BUILD_INFO.json", JSON.stringify({
-            live_url: "https://abap2ui5.github.io/web-abap2UI5-build/",
+            live_url: "https://abap2ui5.github.io/browser-demo/",
             built_at: new Date().toISOString(),
-            built_by: "https://github.com/abap2UI5/web-abap2UI5/actions/runs/" + process.env.GITHUB_RUN_ID,
+            built_by: "https://github.com/abap2UI5/browser-demo/actions/runs/" + process.env.GITHUB_RUN_ID,
             workflow: ".github/workflows/build_web.yaml",
             ui5: pins.ui5,
             sources,
           }, null, 2) + "\n");
         '
-    # SHA-pinned like every other action here. This is the step that holds
-    # DEPLOY_WEB and writes to the published repository, so it was the last
-    # one that should have been tracking a mutable tag.
-    #
-    # The pin is the COMMIT, and the comment carries the full version. Both
-    # halves were wrong until 2026-08-18 and each cost something:
-    #
-    #   refs/tags/v4        = 329bcc8f   <- what was pinned: a tag OBJECT
-    #   refs/tags/v4^{}     = 84c30a85   <- the commit it dereferences to
-    #   refs/tags/v4.1.0^{} = 84c30a85   <- the same commit, under a version
-    #
-    # A tag object is not what "SHA-pinned" means anywhere else in this file,
-    # and a bare `# v4` is a version Dependabot cannot turn into an update
-    # type - so this action fell out of the `actions` group and arrived as its
-    # own pull request, which is the opposite of why the groups exist.
-    - name: deploy to web-abap2UI5-build
-      uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
-      if: github.ref == 'refs/heads/main' && github.repository == 'abap2UI5/web-abap2UI5'
+    # Only main publishes. The guard on the repository keeps a fork's main
+    # from trying to deploy a site it has no Pages for.
+    - name: Upload the site
+      if: github.ref == 'refs/heads/main' && github.repository == 'abap2UI5/browser-demo'
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
       with:
-        deploy_key: ${{ secrets.DEPLOY_WEB }}
-        external_repository: abap2UI5/web-abap2UI5-build
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
-        publish_branch: main
-        force_orphan: true
-        publish_dir: ./build
+        path: ./build
+
+  # A job of its own so that only this one holds the Pages write and the OIDC
+  # token, and only after unit tests and the browser smoke have passed. Until
+  # 2026-11 this step pushed ./build with a deploy key (DEPLOY_WEB) into
+  # abap2UI5/web-abap2UI5-build, a repository that existed only to be served;
+  # that key is gone with it. Same action pins as abap2UI5/docs and
+  # abap2UI5/playground.
+  deploy:
+    needs: build_web
+    if: github.ref == 'refs/heads/main' && github.repository == 'abap2UI5/browser-demo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # One deploy at a time, and a running one is never cancelled - a Pages
+    # deployment cut off halfway is worse than one that lands a minute late.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - id: deployment
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

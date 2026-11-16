@@ -1,14 +1,22 @@
-## web-abap2UI5
+## browser-demo
 
-**Live demo: [abap2ui5.github.io/web-abap2UI5-build](https://abap2ui5.github.io/web-abap2UI5-build/)** — the
+**Live demo: [abap2ui5.github.io/browser-demo](https://abap2ui5.github.io/browser-demo/)** — the
 complete abap2UI5 backend, downported, transpiled to JavaScript and running
 inside your browser tab. No server, no SAP system.
 
 The build is **frozen**: abap2UI5, samples, the open-abap libraries and the
 UI5 release are pinned in [ci/pins.json](ci/pins.json), there is no scheduled
-rebuild, and the demo only changes when this repository does. It is
-deployed to [web-abap2UI5-build](https://github.com/abap2UI5/web-abap2UI5-build)
-(GitHub Pages). Contributor and agent guidance lives in [AGENTS.md](AGENTS.md).
+rebuild, and the demo only changes when this repository does. This
+repository is the source and publishes the demo itself (GitHub Pages).
+Contributor and agent guidance lives in [AGENTS.md](AGENTS.md).
+
+Want to write and run your own abap2UI5 code in the browser? That is the
+[playground](https://abap2ui5.github.io/playground/) — an editor, lessons and
+an AI app builder. This repository is the fixed demo of the framework and its
+samples, plus the transpiled unit tests and a Node.js host.
+
+*Formerly `web-abap2UI5`, deployed through a separate `web-abap2UI5-build`
+repository; the old URL redirects here.*
 
 ### Functionality
 * Downporting with [abaplint](https://abaplint.org/)
@@ -78,7 +86,7 @@ when ffmpeg is installed. [media/record.mjs](media/record.mjs) documents
 all options, including offline recording via `--ui5-from`.
 
 ### CI
-The `build_web` workflow runs on every push to main (and deploys), on pull requests and by hand — there is no schedule: it clones [abap2UI5](https://github.com/abap2UI5/abap2UI5) and the top-level apps of [samples](https://github.com/abap2UI5/samples), runs downport, transpile, unit tests and the webpack build, then **smoke tests the built site in a real browser** before deploying it to [web-abap2UI5-build](https://github.com/abap2UI5/web-abap2UI5-build) (GitHub Pages). Every clone is the commit pinned in `ci/pins.json`, so a rerun of the same commit builds the same demo.
+The `build_web` workflow runs on every push to main (and deploys), on pull requests and by hand — there is no schedule: it clones [abap2UI5](https://github.com/abap2UI5/abap2UI5) and the top-level apps of [samples](https://github.com/abap2UI5/samples), runs downport, transpile, unit tests and the webpack build, then **smoke tests the built site in a real browser** before publishing it to GitHub Pages. Every clone is the commit pinned in `ci/pins.json`, so a rerun of the same commit builds the same demo.
 
 The browser gate is the one that matters: everything upstream of it can be green while the deployed page is blank, because a bundling or initialization fault only shows when the bundle actually runs. `tests/web.spec.js` loads the freshly built `./build`, waits for the in-browser backend to answer, and asserts an event roundtrip restores the saved draft. Before it existed, the site deployed completely untested.
 
@@ -91,11 +99,10 @@ npm run test:e2e    # the same gate, locally (playwright, project chromium-web)
 
 The deploy is a **production** webpack build. Two Terser defaults have to be turned off for it (`keep_classnames`, `keep_fnames`) because the transpiled ABAP carries its type system in the class and function names that RTTI reads back — see the comment in `webpack.config.js`.
 
-The deployed site is not only the bundle: `app/pages/` (README, 404 page) and
-this repository's `LICENSE` are copied into `./build` before the deploy, and
-the build's provenance is written as `BUILD_INFO.json`. The deploy runs with `force_orphan: true`, so anything
-committed in the artifact repository by hand is gone with the next run — every
-file that should be there has to be produced here.
+The deployed site is not only the bundle: `app/pages/404.html` is copied into
+`./build` before the deploy, and the build's provenance is written as
+`BUILD_INFO.json`. The deploy job publishes exactly `./build` — every file that
+should be on the site has to be produced here.
 
 ### Limitations & Todo
 * Samples in subfolders of the samples repository (system samples, launchpad samples) are excluded — they require a real SAP system and cannot be transpiled

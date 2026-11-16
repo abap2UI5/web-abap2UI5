@@ -1,5 +1,5 @@
 {
-  "name": "web-abap2ui5",
+  "name": "browser-demo",
   "private": true,
   "version": "1.0.0",
   "description": "abap2UI5 running fully in the browser - downported, transpiled to JS and bundled for GitHub Pages.",
@@ -24,13 +24,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/abap2UI5/web-abap2UI5.git"
+    "url": "git+https://github.com/abap2UI5/browser-demo.git"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/abap2UI5/web-abap2UI5/issues"
+    "url": "https://github.com/abap2UI5/browser-demo/issues"
   },
-  "homepage": "https://github.com/abap2UI5/web-abap2UI5#readme",
+  "homepage": "https://github.com/abap2UI5/browser-demo#readme",
   "devDependencies": {
     "@abaplint/cli": "2.120.60",
     "@abaplint/database-sqlite": "^2.13.83",
