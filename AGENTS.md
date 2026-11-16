@@ -1,4 +1,4 @@
-# AGENTS.md — web-abap2UI5
+# AGENTS.md — browser-demo
 
 Guidance for AI agents and contributors. Single source of truth for this
 repository's rules. Read before making any change.
@@ -13,9 +13,13 @@ This repository takes that package, adds the [samples](https://github.com/abap2U
 to it in one transpile (the package's own recipe for "your own apps",
 `ci/transpile.mjs`), and webpacks the result into a single bundle that runs
 the **whole backend inside the browser tab** — sql.js stands in for the
-database. The `build_web` workflow deploys it to
-[web-abap2UI5-build](https://github.com/abap2UI5/web-abap2UI5-build)
-(<https://abap2ui5.github.io/web-abap2UI5-build/>).
+database. The `build_web` workflow publishes it to this repository's GitHub
+Pages (<https://abap2ui5.github.io/browser-demo/>).
+
+Until 2026-11 the repository was called `web-abap2UI5` and pushed the build
+with a deploy key into a second repository, `web-abap2UI5-build`, that existed
+only to be served. That repository is archived and only redirects its old URL
+here; do not deploy to it again.
 
 Until 2026-11 this repository cloned abap2UI5 and ran the whole downport and
 transpile itself: a second copy of the framework's pipeline, with its own
@@ -35,7 +39,7 @@ abap2UI5, not here.
 | `ci/` | `pins.json` (samples commit, UI5 release), `clone.mjs` (the samples at their pin), `transpile.mjs` (the package's transpile with the samples) |
 | `srv/` | Node-side entry points: the package's express host on this output, the static build server |
 | `app/` | browser entry: `web.mjs` (boot), `crypto-shim.mjs`, `process-shim.js`, `index.html`, `css/`, `pages/` |
-| `app/pages/` | README + 404 page copied into the deploy — the artifact repo's own files |
+| `app/pages/` | the 404 page copied into the deploy |
 | `tests/web.spec.js` | the browser smoke gate (Playwright project `chromium-web`) |
 
 ## Build & test
@@ -157,10 +161,13 @@ why it is gone:
 
 ## Deploy
 
-`build_web.yaml` deploys `./build` with `force_orphan: true`, so the published
-repository is exactly what `./build` contains — files committed there by hand
-are gone with the next run. Anything visitors should find ships from
-`app/pages/` and the copy step in the workflow.
+`build_web.yaml` uploads `./build` as the Pages artifact and a separate
+`deploy` job (the only one holding `pages: write` and `id-token: write`)
+publishes it — on `main` of `abap2UI5/browser-demo` only, after the unit tests
+and the browser smoke. The site is exactly what `./build` contains; anything
+visitors should find ships from `app/pages/` and the copy step in the
+workflow. The repository's Pages source has to be set to "GitHub Actions".
+The deploy history is the `github-pages` environment.
 
 `BUILD_INFO.json` records what the deploy was built from (the pins, the UI5
 release, this repository's commit) and is read by nobody. The old
