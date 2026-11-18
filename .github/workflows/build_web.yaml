@@ -114,7 +114,7 @@ jobs:
   # 2026-11 this step pushed ./build with a deploy key (DEPLOY_WEB) into
   # abap2UI5/web-abap2UI5-build, a repository that existed only to be served;
   # that key is gone with it. Same action pins as abap2UI5/docs and
-  # abap2UI5/playground.
+  # abap2UI5/browser-playground.
   deploy:
     needs: build_web
     if: github.ref == 'refs/heads/main' && github.repository == 'abap2UI5/browser-demo'

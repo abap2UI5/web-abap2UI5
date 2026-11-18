@@ -17,7 +17,7 @@ repository is the source and publishes the demo itself (GitHub Pages).
 Contributor and agent guidance lives in [AGENTS.md](AGENTS.md).
 
 Want to write and run your own abap2UI5 code in the browser? That is the
-[playground](https://abap2ui5.github.io/playground/) — an editor, lessons and
+[playground](https://abap2ui5.github.io/browser-playground/) — an editor, lessons and
 an AI app builder. This repository is the fixed demo of the framework and its
 samples, plus a Node.js host.
 
